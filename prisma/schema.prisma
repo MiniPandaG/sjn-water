@@ -1,0 +1,166 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+}
+
+model User {
+  id             Int              @id @default(autoincrement())
+  name           String           @db.VarChar(100)
+  email          String           @unique @db.VarChar(150)
+  password_hash  String           @db.VarChar(255)
+  role           String           @default("user") @db.VarChar(20)
+  barrio_id      Int?
+  barrio         Barrio?          @relation(fields: [barrio_id], references: [id])
+  quejas         Queja[]
+  logs           Log[]
+  notificaciones Notificacion[]
+  accounts       Account[]
+  sessions       Session[]
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Barrio {
+  id             Int             @id @default(autoincrement())
+  nombre         String          @db.VarChar(100)
+  users          User[]
+  estado_agua    EstadoAgua[]
+  programaciones Programacion[]
+  avisos         Aviso[]
+  mantenimientos Mantenimiento[]
+  quejas         Queja[]
+
+  @@map("barrios")
+}
+
+model EstadoAgua {
+  id                  Int      @id @default(autoincrement())
+  barrio_id           Int
+  barrio              Barrio   @relation(fields: [barrio_id], references: [id])
+  estado              String   @db.VarChar(20)
+  fecha_actualizacion DateTime @default(now()) @map("fecha_actualizacion")
+
+  @@map("estado_agua")
+}
+
+model Programacion {
+  id           Int       @id @default(autoincrement())
+  barrio_id    Int
+  barrio       Barrio    @relation(fields: [barrio_id], references: [id])
+  fecha_inicio DateTime  @map("fecha_inicio")
+  fecha_fin    DateTime  @map("fecha_fin")
+  descripcion  String?   @db.VarChar(500)
+
+  @@map("programaciones")
+}
+
+model Aviso {
+  id        Int      @id @default(autoincrement())
+  barrio_id Int
+  barrio    Barrio   @relation(fields: [barrio_id], references: [id])
+  mensaje   String   @db.VarChar(500)
+  fecha     DateTime @default(now())
+
+  @@map("avisos")
+}
+
+model Mantenimiento {
+  id           Int       @id @default(autoincrement())
+  barrio_id    Int
+  barrio       Barrio    @relation(fields: [barrio_id], references: [id])
+  fecha_inicio DateTime  @map("fecha_inicio")
+  fecha_fin    DateTime  @map("fecha_fin")
+  descripcion  String?   @db.VarChar(500)
+
+  @@map("mantenimientos")
+}
+
+
+model Queja {
+  id         Int      @id @default(autoincrement())
+  usuario_id Int      @map("usuario_id")
+  usuario    User     @relation(fields: [usuario_id], references: [id])
+  barrio_id  Int      @map("barrio_id")
+  barrio     Barrio   @relation(fields: [barrio_id], references: [id])
+  mensaje    String   @db.VarChar(500)
+  estado     String   @default("pendiente") @db.VarChar(20) // <- Asegúrate de tener este campo
+  fecha      DateTime @default(now())
+
+  @@map("quejas")
+}
+
+model Noticia {
+  id        Int      @id @default(autoincrement())
+  titulo    String   @db.VarChar(200)
+  contenido String   @db.VarChar(1000)
+  fecha     DateTime @default(now())
+
+  @@map("noticias")
+}
+
+model Log {
+  id         Int      @id @default(autoincrement())
+  accion     String   @db.VarChar(300)
+  usuario_id Int      @map("usuario_id")
+  usuario    User     @relation(fields: [usuario_id], references: [id])
+  fecha      DateTime @default(now())
+
+  @@map("logs")
+}
+
+model Notificacion {
+  id         Int      @id @default(autoincrement())
+  usuario_id Int      @map("usuario_id")
+  usuario    User     @relation(fields: [usuario_id], references: [id])
+  mensaje    String   @db.VarChar(300)
+  tipo       String   @default("general") @db.VarChar(20)
+  fecha      DateTime @default(now())
+  leido      Boolean  @default(false)
+
+  @@map("notificaciones")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            Int     @map("user_id")
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              String  @db.VarChar(50)
+  provider          String  @db.VarChar(50)
+  providerAccountId String  @map("provider_account_id") @db.VarChar(100)
+  refresh_token     String? @db.VarChar(500)
+  access_token      String? @db.VarChar(500)
+  expires_at        Int?
+  token_type        String? @db.VarChar(50)
+  scope             String? @db.VarChar(100)
+  id_token          String? @db.VarChar(500)
+  session_state     String? @db.VarChar(100)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token") @db.VarChar(200)
+  userId       Int      @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String   @db.VarChar(100)
+  token      String   @unique @db.VarChar(100)
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
